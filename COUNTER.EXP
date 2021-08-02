@@ -1,0 +1,41 @@
+
+
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+FUNCTION_BLOCK counter
+VAR_INPUT
+	plus: BOOL;
+	minus: BOOL;
+	numberi: WORD;
+END_VAR
+VAR_OUTPUT
+	numbero: WORD;
+END_VAR
+VAR
+
+	rboy2: R_TRIG;
+	rboy3: R_TRIG;
+
+END_VAR
+(* @END_DECLARATION := '0' *)
+
+
+
+rboy2 (CLK := plus);
+
+rboy3 (CLK := minus);
+
+numberi := numberi/168;
+
+IF rboy2.Q THEN
+	numberi := numberi + 1;
+	numbero := numberi * 168;
+END_IF
+
+IF rboy3.Q THEN
+	numberi := numberi - 1;
+	numbero := numberi * 168;
+END_IF
+END_FUNCTION_BLOCK
