@@ -35,8 +35,8 @@ byte arrow[] = {
 };
 
 //define upper and lower bounds for hysteresis and its value
-bool hu = false;
-bool hl = true;
+bool hb = false;
+bool lb = true;
 const int hystereze = 2;
 
 //define display
@@ -187,39 +187,39 @@ void loop() {
   }
 
   //if output is off and temperature exceeds desired value, turn on
-  if (hl == true && tempC > tempSet) {
+  if (lb == true && tempC > tempSet) {
 
     digitalWrite(ledUp, 1);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hl = false;
+    lb = false;
 
   }
   //if value exceeds upper bound of hysteresis, stay on and let program know
   //this happened
-  else if ((hl == false || digitalRead(ledUp) == HIGH) && tempC > (tempSet + hystereze)) {
+  else if ((lb == false || digitalRead(ledUp) == HIGH) && tempC > (tempSet + hystereze)) {
 
     digitalWrite(ledUp, 1);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hu = true;
+    hb = true;
 
   }
   //if value exceeded upper bound of hysteresis (previous if statement),
   // turn off at set value
-  else if (hu == true && tempC < tempSet) {
+  else if (hb == true && tempC < tempSet) {
     digitalWrite(ledUp, 0);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hu = false;
+    hb = false;
   }
   //if value didn't exceed hysteresis (stayed close to set value), 
   //turn off at lower bound of hysteresis, so not to cause flickering
-  else if (hu == false && tempC < (tempSet - hystereze)) {
+  else if (hb == false && tempC < (tempSet - hystereze)) {
     digitalWrite(ledUp, 0);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hl = true;
+    lb = true;
   }
 
   //write values onto Serial monitor with delay
