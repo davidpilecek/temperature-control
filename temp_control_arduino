@@ -35,7 +35,7 @@ byte arrow[] = {
 };
 
 //define upper and lower bounds for hysteresis and its value
-bool hb = false;
+bool ub = false;
 bool lb = true;
 const int hystereze = 2;
 
@@ -202,20 +202,20 @@ void loop() {
     digitalWrite(ledUp, 1);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hb = true;
+    ub = true;
 
   }
   //if value exceeded upper bound of hysteresis (previous if statement),
   // turn off at set value
-  else if (hb == true && tempC < tempSet) {
+  else if (ub == true && tempC < tempSet) {
     digitalWrite(ledUp, 0);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
-    hb = false;
+    ub = false;
   }
   //if value didn't exceed hysteresis (stayed close to set value), 
   //turn off at lower bound of hysteresis, so not to cause flickering
-  else if (hb == false && tempC < (tempSet - hystereze)) {
+  else if (ub == false && tempC < (tempSet - hystereze)) {
     digitalWrite(ledUp, 0);
     digitalWrite(ledDown, !digitalRead(ledUp));
 
