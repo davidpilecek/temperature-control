@@ -17,6 +17,7 @@
    button2 D9
    led1 D7
 */
+#include <EEPROM.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <LiquidCrystal.h>
@@ -94,6 +95,8 @@ float count;
 unsigned long lastDebounceTime = 0;
 unsigned long lastDebounceTime2 = 0;
 
+const byte tempSetAddr = 0;
+
 // the last time the output pin was toggled
 const byte debounceDelay = 3;
 
@@ -132,6 +135,10 @@ void setup(void)
 
   sensors.begin();  // Start up the library
   Serial.begin(9600);
+
+  tempSet = EEPROM.read(tempSetAddr);
+
+  
 }
 
 void loop(void)
@@ -266,6 +273,8 @@ void loop(void)
 
     hl = true;
   }
+
+EEPROM.update(tempSetAddr, tempSet);
 
   //reset last state of button
   lastButtonState = reading;
