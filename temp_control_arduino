@@ -1,4 +1,25 @@
-#include <LiquidCrystal.h>;
+/*
+  The circuit:
+   LCD RS pin to digital pin 12
+   LCD Enable pin to digital pin 11
+   LCD D4 pin to digital pin 5
+   LCD D5 pin to digital pin 4
+   LCD D6 pin to digital pin 3
+   LCD D7 pin to digital pin 2
+   LCD R/W pin to ground
+   LCD VSS pin to ground
+   LCD VCC pin to 5V
+   10K resistor:
+   ends to +5V and ground
+   wiper to LCD VO pin (pin 3)
+   switch A0
+   button1 D8
+   button2 D9
+   led1 D7
+*/
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <LiquidCrystal.h>
 
 //define custom characters for display
 byte degree[8] = {
@@ -35,47 +56,37 @@ byte arrow[] = {
 };
 
 
-
 //define upper and lower bounds for hysteresis and its value
 bool hu = false;
 bool hl = true;
-const int hystereze = 3;
-
-//define display
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+const byte hystereze = 1;
 
 //define inputs
-const int temp = A0;
-const int plus = 9;
-const int minus = 10;
-const int fine = 8;
+const byte plus = 8;
+const byte minus = 9;
+const byte fine = A0;
+
 
 //define temperature related variables
-int tempF;
 float tempC;
-float tempVal;
+float tempSet = 85;
+int tempF;
 int tempSetF;
-float tempSet = 24;
-
 
 //define outputs
-const int ledUp = 13;
-const int ledDown = 7;
-
+const byte ledUp = 7;
+const byte ledDown = LED_BUILTIN;
 
 //timer variables
-const int increment = 1;
-const int delayMillis = 250;
-int lastMillis;
-int currMillis;
+unsigned long currMillis;
 
 //button debounce variables
 
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;
+bool buttonState;             // the current reading from the input pin
+bool lastButtonState = LOW;
 
-int buttonState2;            // the current reading from the input pin
-int lastButtonState2 = LOW;
+bool buttonState2;            // the current reading from the input pin
+bool lastButtonState2 = LOW;
 
 float count;
 
@@ -84,35 +95,66 @@ unsigned long lastDebounceTime = 0;
 unsigned long lastDebounceTime2 = 0;
 
 // the last time the output pin was toggled
-unsigned long debounceDelay = 10;
+const byte debounceDelay = 3;
+
+// Data wire is plugged into digital pin 2 on the Arduino
+#define ONE_WIRE_BUS 6
+
+// Setup a oneWire instance to communicate with any OneWire device
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass oneWire reference to DallasTemperature library
+DallasTemperature sensors(&oneWire);
+
+
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 
 
-
-void setup()
+void setup(void)
 {
 
+  //create custom characters to be displayed
   lcd.createChar(1, thermometer);
   lcd.createChar(0, degree);
   lcd.createChar(3, arrow);
-
-  lcd.begin(16, 2);
 
   pinMode(ledDown, OUTPUT);
   pinMode(ledUp, OUTPUT);
   pinMode(plus, INPUT);
   pinMode(minus, INPUT);
-  pinMode(temp, INPUT);
   pinMode(fine, INPUT);
+
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+
+  sensors.begin();  // Start up the library
   Serial.begin(9600);
 }
 
-
-
-
-
-void loop()
+void loop(void)
 {
+  //initiate counting of elapsed time
+  currMillis = millis();
+
+  //read button state
+  bool reading = digitalRead(plus);
+  bool reading2 = digitalRead(minus);
+
+  // Send the command to get temperatures
+  sensors.requestTemperatures();
+
+  sensors.setResolution(10);
+
+  tempC = sensors.getTempCByIndex(0);
+
+  tempF = (tempC + 32) * 9 / 5;
+  //tempF = round(tempF);
+  tempSetF = (tempSet + 32) * 9 / 5;
+  //tempSetF = round(tempSetF);
+  //print the temperature in Celsius
 
   //write all values onto display
   lcd.home();
@@ -121,59 +163,38 @@ void loop()
   lcd.print(" :");
   lcd.setCursor(3, 0);
   lcd.print(tempC);
-
+  
   lcd.write((uint8_t)0);
-  lcd.print("C /");
+  lcd.print("C/");
   lcd.print(tempF);
-
+  
   lcd.write((uint8_t)0);
   lcd.print("F");
+  
   lcd.setCursor(0, 1);
   lcd.write((uint8_t)1);
   lcd.write((uint8_t)3);
   lcd.print(":");
   lcd.print(tempSet);
-
   lcd.write((uint8_t)0);
-  lcd.print("C /");
+  lcd.print("C/");
   lcd.print(tempSetF);
-  ;
+
   lcd.write((uint8_t)0);
   lcd.print("F");
 
-  //initiate counting of elapsed time
-  currMillis = millis();
+  Serial.println(tempC);
 
-  //read sensor value
-  tempVal = analogRead(temp);
+  //change increment based on user
+  if (digitalRead(fine))  count = 0.1;
 
-  //transfer sensor values into desired ones
-  tempC = map(tempVal, 0 , 1024, -40, 125);
-  tempF = (tempC * 9 / 5) + 32;
-  tempSetF = (tempSet * 9 / 5) + 32;
-
-  //read button state
-  int reading = digitalRead(plus);
-  int reading2 = digitalRead(minus);
+  else count = 1;
 
 
-  if (digitalRead(fine) == 1) {
+  //if button state changes
+  // reset the debouncing timer
 
-    count = 0.1;
-
-  }
-  else if(digitalRead(fine) == 0){
-      count = 1;
-}
-
-    //if button state changes
-    if (reading != lastButtonState) {
-
-      // reset the debouncing timer
-      lastDebounceTime = millis();
-
-    }
-
+  if (reading != lastButtonState) lastDebounceTime = millis();
 
   if ((millis() - lastDebounceTime) > debounceDelay) {
 
@@ -181,22 +202,15 @@ void loop()
       buttonState = reading;
 
 
-      if (buttonState == HIGH) {
+      if (buttonState) tempSet += count;
 
-        tempSet += count;
-        Serial.println(tempSet);
-
-      }
     }
 
   }
 
+  // reset the debouncing timer
+  if (reading2 != lastButtonState2) lastDebounceTime2 = millis();
 
-  if (reading2 != lastButtonState2) {
-    // reset the debouncing timer
-    lastDebounceTime2 = millis();
-
-  }
 
   if ((millis() - lastDebounceTime2) > debounceDelay) {
     // whatever the reading is at, it's been there for longer
@@ -206,14 +220,8 @@ void loop()
     if (reading2 != buttonState2) {
       buttonState2 = reading2;
 
-
-      // only toggle the LED if the new button state is HIGH
-      if (buttonState2 == HIGH) {
-
-        tempSet -= count;
-        Serial.println(tempSet);
-
-      }
+      // only toggle if the new button state is HIGH
+      if (buttonState2 == HIGH) tempSet -= count;
     }
   }
 
@@ -227,7 +235,8 @@ void loop()
     hl = false;
 
   }
-  //if value exceeds upper bound of hysteresis, stay on and let program know
+  //if value exceeds upper bound of hysteresis,
+  //stay on and let program know
   //this happened
   else if ((hl == false || digitalRead(ledUp) == HIGH ) && tempC >= (tempSet + hystereze))
   {
@@ -258,25 +267,6 @@ void loop()
     hl = true;
   }
 
-
-  //write values onto Serial monitor with delay
-  if (currMillis - lastMillis >= delayMillis ) {
-
-
-    Serial.println("CURRENT TEMP: ");
-    Serial.print(tempC);
-    Serial.println(" °C");
-
-    Serial.print(tempF);
-    Serial.println(" °F");
-
-    Serial.println("SET TEMP: ");
-    Serial.print(tempSet);
-    Serial.println(" °C");
-
-    lastMillis = currMillis;
-
-  }
   //reset last state of button
   lastButtonState = reading;
   lastButtonState2 = reading2;
